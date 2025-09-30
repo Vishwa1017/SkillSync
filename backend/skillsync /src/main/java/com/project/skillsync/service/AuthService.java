@@ -1,9 +1,6 @@
 package com.project.skillsync.service;
 
-import com.project.skillsync.dto.AuthResponse;
-import com.project.skillsync.dto.LoginRequest;
-import com.project.skillsync.dto.OtpVerificationRequest;
-import com.project.skillsync.dto.RegisterRequest;
+import com.project.skillsync.dto.*;
 import com.project.skillsync.exception.DuplicateResourceException;
 import com.project.skillsync.model.Role;
 import com.project.skillsync.model.User;
@@ -11,6 +8,8 @@ import com.project.skillsync.repository.RoleRepository;
 import com.project.skillsync.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -117,6 +116,8 @@ public class AuthService {
 
         return response;
     }
+
+
 
 
 
