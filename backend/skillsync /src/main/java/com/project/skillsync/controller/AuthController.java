@@ -1,6 +1,7 @@
 package com.project.skillsync.controller;
 
 import com.project.skillsync.dto.LoginRequest;
+import com.project.skillsync.dto.OtpVerificationRequest;
 import com.project.skillsync.dto.RegisterRequest;
 import com.project.skillsync.dto.AuthResponse;
 import com.project.skillsync.service.AuthService;
@@ -24,5 +25,10 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.loginUser(request));
     }
+    @PostMapping("/verify-otp")
+    public ResponseEntity<AuthResponse> verifyOtp(@RequestBody OtpVerificationRequest request) {
+        return ResponseEntity.ok(authService.verifyOtpAndLogin(request));
+    }
+
 
 }

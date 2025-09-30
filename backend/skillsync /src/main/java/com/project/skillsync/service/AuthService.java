@@ -2,6 +2,7 @@ package com.project.skillsync.service;
 
 import com.project.skillsync.dto.AuthResponse;
 import com.project.skillsync.dto.LoginRequest;
+import com.project.skillsync.dto.OtpVerificationRequest;
 import com.project.skillsync.dto.RegisterRequest;
 import com.project.skillsync.exception.DuplicateResourceException;
 import com.project.skillsync.model.Role;
@@ -28,6 +29,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final OtpService otpService;
+
 
     @Transactional
     public AuthResponse registerUser(RegisterRequest request){
@@ -59,7 +62,7 @@ public class AuthService {
     }
 
     public AuthResponse loginUser(LoginRequest request) {
-        // 1️⃣ Authenticate credentials (this calls CustomUserDetailsService + PasswordEncoder behind the scenes)
+        // 1️⃣ Authenticate credentials
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getUsernameOrEmail(),
@@ -67,26 +70,55 @@ public class AuthService {
                 )
         );
 
-        // 2️⃣ Fetch user from DB (to include roles, email in response)
+        // 2️⃣ Fetch user from DB
         User user = userRepository.findByEmail(request.getUsernameOrEmail())
                 .or(() -> userRepository.findByUsername(request.getUsernameOrEmail()))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 3️⃣ Generate JWT token
-        String token = jwtService.generateToken(user.getUsername());
+        // 3️⃣ Generate & send OTP
+        otpService.createOtp(user.getEmail()); // 👈 Email is better than username for OTP
 
-        // 4️⃣ Build response DTO
+        // 4️⃣ Build response
         AuthResponse response = new AuthResponse();
         response.setEmail(user.getEmail());
         response.setUsername(user.getUsername());
         response.setRoles(user.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toSet()));
-        response.setMessage("Login successful");
+        response.setMessage("OTP sent to your registered email");
+        response.setToken(null); // no JWT yet
+
+        return response;
+    }
+
+    public AuthResponse verifyOtpAndLogin(OtpVerificationRequest request) {
+        // 1️⃣ Verify OTP from Redis
+        boolean isValid = otpService.verifyOtp(request.getEmail(), request.getOtp());
+        if (!isValid) {
+            throw new DuplicateResourceException("Invalid or expired OTP");
+        }
+
+        // 2️⃣ Fetch user again
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new DuplicateResourceException("User not found"));
+
+        // 3️⃣ Generate JWT token
+        String token = jwtService.generateToken(user.getUsername());
+
+        // 4️⃣ Build response
+        AuthResponse response = new AuthResponse();
+        response.setEmail(user.getEmail());
+        response.setUsername(user.getUsername());
+        response.setRoles(user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet()));
+        response.setMessage("Login successful with OTP");
         response.setToken(token);
 
         return response;
     }
+
+
 
 
 }
